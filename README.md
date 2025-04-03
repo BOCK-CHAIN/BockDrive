@@ -1,6 +1,5 @@
 # Bock Drive - Cloud Storage Application
 
-![Bock Drive Logo](./public/bock_logo.png)
 
 Bock Drive is a modern cloud storage solution that provides secure and accessible file storage, similar to Google Drive but with enhanced features and a cleaner interface.
 
