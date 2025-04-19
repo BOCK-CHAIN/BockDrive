@@ -35,7 +35,7 @@ Bock Drive is a modern cloud storage solution that provides secure and accessibl
 
 1. Clone the repository:
    ```
-   git clone https://github.com/your-username/bock-drive.git
+   git clone https://github.com/BOCK-CHAIN/bock-drive.git
    cd bock-drive
    ```
 
@@ -62,4 +62,88 @@ Bock Drive is a modern cloud storage solution that provides secure and accessibl
 
 5. Open [http://localhost:5173](http://localhost:5173) to view the app in your browser.
 
-## Project Structure
+
+
+## GCP Deployment Guide (Vite + React with Nginx)
+
+This guide explains how to deploy a **Vite + React** application on a **Google Cloud Platform (GCP)** Virtual Machine (VM) using **Nginx** to serve static files.
+
+## Prerequisites
+- A GCP account and a configured VM instance.
+- Basic familiarity with SSH and Linux commands.
+- Firewall rules allowing port 80 (HTTP) on your GCP VM.
+
+## Steps
+
+### 1. Install Node.js and npm on GCP VM
+Install **Node.js** (v14 or later) and **npm** to build the Vite project.
+
+```bash
+sudo apt update
+sudo apt install -y nodejs npm
+```
+
+Verify installation:
+```bash
+node -v
+npm -v
+```
+
+### 2. Build the React + Vite Project
+Clone or upload your Vite + React project to the VM, then build it.
+
+```bash
+git clone https://github.com/BOCK-CHAIN/BockDrive.git
+cd bock-docs
+```
+
+Install dependencies:
+```bash
+npm install
+```
+
+Build the app for production:
+```bash
+npm run build
+```
+
+This generates a `dist/` folder containing the static site files.
+
+### 3. Install and Configure Nginx
+Install **Nginx** and set it up to serve the static files:
+
+```bash
+sudo apt update
+sudo apt install nginx -y
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
+
+Remove default Nginx files and copy the static build:
+```bash
+sudo rm -rf /var/www/html/*
+sudo cp -r dist/* /var/www/html/
+sudo systemctl restart nginx
+```
+
+### 4. Access Your Site
+Find your VM's external IP in the GCP Console and visit it in a browser:
+
+```
+http://[YOUR_EXTERNAL_IP]
+```
+
+> **Note**: Ensure port 80 (HTTP) is open in your GCP VM's firewall settings.
+
+## Important Considerations
+- **Firewall Rules**: Verify that port 80 (HTTP) is allowed in your GCP firewall to enable public access.
+- **Nginx Configuration**: Nginx serves content from `/var/www/html` by default. Ensure the `dist/` folder contents are correctly copied to this directory.
+- **Auto-Start Nginx**: Confirm Nginx starts on reboot:
+  ```bash
+  sudo systemctl enable nginx
+  ```
+
+## Troubleshooting
+- If the site doesn't load, check Nginx status: `sudo systemctl status nginx`.
+- Verify file permissions in `/var/www/html`: `sudo chmod -R 755 /var/www/html`.
+- Confirm the `dist/` folder contains the static files.
