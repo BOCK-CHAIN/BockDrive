@@ -35,8 +35,8 @@ Bock Drive is a modern cloud storage solution that provides secure and accessibl
 
 1. Clone the repository:
    ```
-   git clone https://github.com/BOCK-CHAIN/bock-drive.git
-   cd bock-drive
+   git clone https://github.com/BOCK-CHAIN/BockDrive.git
+   cd BockDrive
    ```
 
 2. Install dependencies:
@@ -94,7 +94,7 @@ Clone or upload your Vite + React project to the VM, then build it.
 
 ```bash
 git clone https://github.com/BOCK-CHAIN/BockDrive.git
-cd bock-docs
+cd BockDrive
 ```
 
 Install dependencies:
