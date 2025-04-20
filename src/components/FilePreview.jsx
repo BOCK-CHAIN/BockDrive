@@ -1,16 +1,60 @@
-import { Fragment } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { DocumentIcon, FolderIcon } from '@heroicons/react/24/outline';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { formatFileSize } from '../utils/format';
+import { ref, getDownloadURL } from 'firebase/storage';
 
 function FilePreview({ isOpen, onClose, file }) {
+  const [fileContent, setFileContent] = useState('');
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    console.log('File object:', {
+      name: file?.name,
+      mimeType: file?.mimeType,
+      downloadURL: file?.downloadURL,
+      size: file?.size,
+      type: file?.type,
+      updatedAt: file?.updatedAt
+    });
+  }, [file]);
+
+  useEffect(() => {
+    const fetchFileContent = async () => {
+      try {
+        // Only fetch content for text files
+        if (file?.mimeType?.includes('text') && file.downloadURL) {
+          console.log('Fetching content for text file:', file.downloadURL);
+          const response = await fetch(file.downloadURL, {
+            headers: {
+              'Accept': 'text/plain'
+            }
+          });
+          if (!response.ok) {
+            throw new Error(`Failed to fetch file: ${response.statusText}`);
+          }
+          const text = await response.text();
+          setFileContent(text);
+          setError(null);
+        }
+      } catch (err) {
+        console.error('Error fetching file:', err);
+        setError(err.message);
+      }
+    };
+
+    fetchFileContent();
+  }, [file]);
+
   const getFileType = (mimeType) => {
     if (!mimeType) return 'unknown';
     if (mimeType.startsWith('image/')) return 'image';
     if (mimeType.startsWith('video/')) return 'video';
     if (mimeType.startsWith('audio/')) return 'audio';
     if (mimeType.includes('pdf')) return 'pdf';
+    if (mimeType.includes('text')) return 'text';
     return 'other';
   };
 
@@ -23,49 +67,60 @@ function FilePreview({ isOpen, onClose, file }) {
       );
     }
 
-    const fileType = getFileType(file?.mimeType);
+    const fileType = getFileType(file.mimeType);
 
     switch (fileType) {
       case 'image':
         return (
-          <img
-            src={file.downloadURL}
-            alt={file.name}
-            className="max-w-full max-h-[80vh] object-contain"
-          />
-        );
-      case 'video':
-        return (
-          <video
-            controls
-            className="max-w-full max-h-[80vh]"
-          >
-            <source src={file.downloadURL} type={file.mimeType} />
-            Your browser does not support the video tag.
-          </video>
-        );
-      case 'audio':
-        return (
-          <audio
-            controls
-            className="w-full"
-          >
-            <source src={file.downloadURL} type={file.mimeType} />
-            Your browser does not support the audio tag.
-          </audio>
+          <div className="flex justify-center items-center">
+            <img
+              src={file.downloadURL}
+              alt={file.name}
+              className="max-w-full max-h-[80vh] object-contain"
+              onError={(e) => {
+                console.error('Image failed to load:', e);
+                setError('Failed to load image');
+              }}
+            />
+          </div>
         );
       case 'pdf':
         return (
-          <iframe
-            src={file.downloadURL}
-            title={file.name}
-            className="w-full h-[80vh]"
-          />
+          <div className="w-full h-[80vh]">
+            <object
+              data={file.downloadURL}
+              type="application/pdf"
+              className="w-full h-full"
+            >
+              <div className="text-center p-8">
+                <p className="text-gray-500 mb-4">
+                  Unable to display PDF directly. 
+                </p>
+                <a
+                  href={file.downloadURL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-700 underline"
+                >
+                  Open PDF in new tab
+                </a>
+              </div>
+            </object>
+          </div>
+        );
+      case 'text':
+        return (
+          <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+            <pre className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 overflow-auto max-h-[80vh]">
+              {fileContent || 'Loading content...'}
+            </pre>
+          </div>
         );
       default:
         return (
           <div className="text-center p-8">
-            <p className="text-gray-500 mb-4">Preview not available</p>
+            <p className="text-gray-500 mb-4">Preview not available for this file type</p>
+            <p className="text-sm text-gray-400 mb-4">File type: {file.mimeType || 'Unknown'}</p>
             <a
               href={file.downloadURL}
               download={file.name}
@@ -120,39 +175,27 @@ function FilePreview({ isOpen, onClose, file }) {
                 </div>
 
                 <div className="mt-4">
-                  {file?.type === 'file' ? (
-                    <div className="space-y-4">
-                      <div className="aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg 
-                        flex items-center justify-center">
-                        <DocumentIcon className="w-16 h-16 text-gray-400 dark:text-gray-500" />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Size: {formatFileSize(file.size)}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Modified: {file.updatedAt?.toDate().toLocaleDateString()}
-                          </p>
-                        </div>
-                        <a
-                          href={file.downloadURL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium 
-                            text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                        >
-                          <ArrowDownTrayIcon className="w-4 h-4" />
-                          Download
-                        </a>
-                      </div>
+                  {renderFileContent()}
+                  
+                  <div className="mt-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Size: {formatFileSize(file?.size)}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Modified: {file?.updatedAt?.toDate().toLocaleDateString()}
+                      </p>
                     </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <FolderIcon className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                      <p className="text-gray-500 dark:text-gray-400">This is a folder</p>
-                    </div>
-                  )}
+                    <a
+                      href={file?.downloadURL}
+                      download={file?.name}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium 
+                        text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                    >
+                      <ArrowDownTrayIcon className="w-4 h-4" />
+                      Download
+                    </a>
+                  </div>
                 </div>
               </Dialog.Panel>
             </Transition.Child>
